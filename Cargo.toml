@@ -1,0 +1,37 @@
+[package]
+name = "wgcf-teams"
+description = "Extract wireguard configurations from cloudflare's warp for teams"
+version = "0.1.0"
+edition = "2021"
+authors = ["poscat <poscat@poscat.moe>"]
+
+repository = "https://github.com/poscat0x04/wgcf-teams"
+
+readme = "README.md"
+license = "BSD-3"
+
+keywords = ["wireguard", "warp", "cloudflare"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+tokio = { version = "1.21", features = ["rt-multi-thread", "macros", "time"] }
+reqwest = { version = "0.11", features = ["json", "gzip", "cookies"] }
+wireguard-keys = { version = "0.1" }
+webbrowser = { version = "0.8" }
+terminal_size = { version = "0.2" }
+iprange = { version = "0.6" }
+ipnet = { version = "2.5" }
+cidr = { version = "0.2" }
+serde = { version = "1.0", features = ["serde_derive"] }
+serde_json = { version = "1.0" }
+pretty = { version = "0.11" }
+anyhow = { version = "1.0" }
+thiserror = { version = "1.0" }
+
+[[bin]]
+name = "wgcf-teams"
+path = "src/main.rs"
+
+[profile.dev]
+opt-level = 1
