@@ -2,11 +2,14 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::path::Path;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Utc};
-use cidr::IpInet;
+use cidr::{IpInet, Ipv4Inet, Ipv6Inet};
+use cidr::errors::NetworkLengthTooLongError;
+use cidr::Family::Ipv4;
 use ipnet::{Ipv4Net, Ipv6Net};
 use iprange::{IpNet, IpRange};
 use pretty::RcDoc;
@@ -163,6 +166,15 @@ struct IFAddrs {
     v6: Ipv6Addr,
 }
 
+impl IFAddrs {
+    pub fn to_inet_vec(self) -> Result<Vec<IpInet>, NetworkLengthTooLongError> {
+        let mut v = Vec::new();
+        v.push(IpInet::V6(Ipv6Inet::new(self.v6, 128)?));
+        v.push(IpInet::V4(Ipv4Inet::new(self.v4, 32)?));
+        Ok(v)
+    }
+}
+
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 struct Services {
     http_proxy: SocketAddr,
@@ -179,11 +191,11 @@ struct WireguardConfig {
     private_key: Privkey,
     if_address: Vec<IpInet>,
     dns: IpAddr,
-    mtu: u8,
+    mtu: u16,
     public_key: Pubkey,
     allowed_ipv4_range: IpRange<Ipv4Net>,
     allowed_ipv6_range: IpRange<Ipv6Net>,
-    endpoint: SocketAddr,
+    endpoint: String,
 }
 
 fn kvdoc<'a, A, U>(key: &'a str, val: U) -> RcDoc<'a, A>
@@ -220,10 +232,53 @@ impl WireguardConfig {
 
     pub fn fmt_config(self, width: usize) -> String {
         let mut ret = String::new();
-        todo!();
+        todo!()
     }
 
     pub fn print_config(self) {}
+
+    pub fn write_config<P>(self, path: P)
+        where
+            P: AsRef<Path> + Send + 'static
+    {}
+}
+
+impl WgIFConfig {
+    pub fn to_inet_vec(self) -> Result<Vec<IpInet>, NetworkLengthTooLongError> {
+        self.addresses.to_inet_vec()
+    }
+}
+
+impl WarpConfig {
+    pub fn to_wg_config(mut self, privkey: Privkey) -> Result<WireguardConfig> {
+        let peer =
+            self.peers.pop()
+                .with_context(|| format!(
+                    "Warp config contains no peers: {}",
+                    serde_json::to_string_pretty(&self)
+                        .expect("Impossible, failed to serialize a WarpConfig to JSON")
+                ))?;
+        let addrs =
+            self.interface
+                .to_inet_vec()
+                .context("")?;
+        Ok(WireguardConfig {
+            private_key: privkey,
+            public_key: peer.public_key,
+            endpoint: peer.endpoint.host,
+            dns: IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)),
+            mtu: 1420,
+            if_address: addrs,
+            allowed_ipv4_range: todo!(),
+            allowed_ipv6_range: todo!(),
+        })
+    }
+}
+
+impl RegistrationResult {
+    pub fn to_wg_config(self, privkey: Privkey) -> Result<WireguardConfig> {
+        self.config.to_wg_config(privkey)
+    }
 }
 
 pub async fn build_client() -> reqwest::Result<Client> {
