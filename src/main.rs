@@ -15,7 +15,6 @@ use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, CONNECTION, Head
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio;
-use tokio::io::AsyncBufReadExt;
 use wireguard_keys::{Privkey, Pubkey};
 
 const API_ENDPOINT: &str = "https://api.cloudflareclient.com/v0i2209280024/reg";
