@@ -316,8 +316,9 @@ pub async fn get_jwt_token() -> io::Result<String> {
     Ok(str)
 }
 
+#[cfg(test)]
 mod test {
-    use ipnet::Ipv4Net;
+    use ipnet::{IpNet, Ipv4Net, Ipv6Net};
     use iprange::IpRange;
     use serde_json::*;
 
@@ -503,9 +504,12 @@ mod test {
 "#;
 
     #[test]
-    fn test() {
-        let res: CFResp<RegistrationResult> = from_str(TEST_FILE).unwrap();
-        println!("{:?}", res);
-        println!("{}", "0.0.0.0/32".parse::<Ipv4Net>().unwrap().to_string());
+    fn test_response_parsing() {
+        let res: serde_json::Result<CFResp<RegistrationResult>> = from_str(TEST_FILE);
+        assert!(res.is_ok());
+        println!("Parse succeeded: {:?}", res.unwrap());
     }
+
+    #[test]
+    fn test_wg_profile_generation() {}
 }
