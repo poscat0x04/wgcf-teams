@@ -19,6 +19,9 @@ use wireguard_keys::{Privkey, Pubkey};
 
 const API_ENDPOINT: &str = "https://api.cloudflareclient.com/v0i2209280024/reg";
 const INSTRUCTION_URL: &str = "<TODO>";
+const WG_MTU: u16 = 1420;
+const V4_DNS: IpAddr = IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1));
+const V6_DNS: IpAddr = IpAddr::V6(Ipv6Addr::new(0x2606, 0x4700, 0x4700, 0x0, 0x0, 0x0, 0x0, 0x1111));
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -192,7 +195,7 @@ struct Metrics {
 struct WireguardConfig {
     private_key: Privkey,
     if_address: Vec<IpNet>,
-    dns: IpAddr,
+    dns: Vec<IpAddr>,
     mtu: u16,
     public_key: Pubkey,
     allowed_ipv4_range: IpRange<Ipv4Net>,
@@ -219,7 +222,7 @@ impl WireguardConfig {
             RcDoc::text("[Interface]"),
             kvdoc("PrivateKey", self.private_key.to_base64()),
             kvdoc("Address", self.if_address.first()?.to_string()),
-            kvdoc("DNS", self.dns.to_string()),
+            //kvdoc("DNS", self.dns.to_string()),
             kvdoc("MTU", self.mtu.to_string()),
             RcDoc::text("[Peer]"),
             kvdoc("PublicKey", self.public_key.to_base64()),
@@ -251,6 +254,7 @@ impl WgIFConfig {
     }
 }
 
+// TODO: add ip range exclusion logic
 impl WarpConfig {
     pub fn to_wg_config(mut self, privkey: Privkey) -> Result<WireguardConfig> {
         let peer =
@@ -268,14 +272,16 @@ impl WarpConfig {
         let mut v6range: IpRange<Ipv6Net> = IpRange::new();
         v6range.add("::/0".parse().expect("Impossible, failed to parse '::/0'"));
 
-        // TODO: add ip range exclusion logic
+        let mut dns = Vec::new();
+        dns.push(V4_DNS);
+        dns.push(V6_DNS);
 
         Ok(WireguardConfig {
             private_key: privkey,
             public_key: peer.public_key,
             endpoint: peer.endpoint.host,
-            dns: IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)),
-            mtu: 1420,
+            dns,
+            mtu: WG_MTU,
             if_address: addrs,
             allowed_ipv4_range: v4range,
             allowed_ipv6_range: v6range,
@@ -322,7 +328,7 @@ mod test {
     use iprange::IpRange;
     use serde_json::*;
 
-    use crate::{CFResp, RegistrationResult};
+    use crate::{CFResp, RegistrationResult, V4_DNS, V6_DNS};
 
     const TEST_FILE: &str = r#"
 {
@@ -508,6 +514,12 @@ mod test {
         let res: serde_json::Result<CFResp<RegistrationResult>> = from_str(TEST_FILE);
         assert!(res.is_ok());
         println!("Parse succeeded: {:?}", res.unwrap());
+    }
+
+    #[test]
+    fn test_dns_server_const() {
+        assert_eq!(V4_DNS.to_string(), "1.1.1.1");
+        assert_eq!(V6_DNS.to_string(), "2606:4700:4700::1111");
     }
 
     #[test]
