@@ -7,11 +7,8 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Utc};
-use cidr::{IpInet, Ipv4Inet, Ipv6Inet};
-use cidr::errors::NetworkLengthTooLongError;
-use cidr::Family::Ipv4;
-use ipnet::{Ipv4Net, Ipv6Net};
-use iprange::{IpNet, IpRange};
+use ipnet::{IpNet, Ipv4Net, Ipv6Net};
+use iprange::IpRange;
 use pretty::RcDoc;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, CONNECTION, HeaderMap, HeaderName, HeaderValue};
@@ -167,11 +164,17 @@ struct IFAddrs {
 }
 
 impl IFAddrs {
-    pub fn to_inet_vec(self) -> Result<Vec<IpInet>, NetworkLengthTooLongError> {
+    pub fn to_inet_vec(self) -> Vec<IpNet> {
         let mut v = Vec::new();
-        v.push(IpInet::V6(Ipv6Inet::new(self.v6, 128)?));
-        v.push(IpInet::V4(Ipv4Inet::new(self.v4, 32)?));
-        Ok(v)
+        let v6inet =
+            Ipv6Net::new(self.v6, 128)
+                .expect("Impossible, 128 is a valid netmask length for ipv6 addresses");
+        let v4inet =
+            Ipv4Net::new(self.v4, 32)
+                .expect("Impossible, 32 is a valid netmask length for ipv4 addresses");
+        v.push(IpNet::V6(v6inet));
+        v.push(IpNet::V4(v4inet));
+        v
     }
 }
 
@@ -189,7 +192,7 @@ struct Metrics {
 #[derive(Eq, PartialEq, Debug)]
 struct WireguardConfig {
     private_key: Privkey,
-    if_address: Vec<IpInet>,
+    if_address: Vec<IpNet>,
     dns: IpAddr,
     mtu: u16,
     public_key: Pubkey,
@@ -206,7 +209,7 @@ fn kvdoc<'a, A, U>(key: &'a str, val: U) -> RcDoc<'a, A>
 }
 
 fn ip_range_to_doc<T>(range: &IpRange<T>) -> RcDoc
-    where T: ToString + IpNet
+    where T: ToString + iprange::IpNet
 {
     RcDoc::intersperse(range.iter().map(|x| x.to_string()), RcDoc::text(", "))
 }
@@ -244,7 +247,7 @@ impl WireguardConfig {
 }
 
 impl WgIFConfig {
-    pub fn to_inet_vec(self) -> Result<Vec<IpInet>, NetworkLengthTooLongError> {
+    pub fn to_inet_vec(self) -> Vec<IpNet> {
         self.addresses.to_inet_vec()
     }
 }
@@ -258,10 +261,7 @@ impl WarpConfig {
                     serde_json::to_string_pretty(&self)
                         .expect("Impossible, failed to serialize a WarpConfig to JSON")
                 ))?;
-        let addrs =
-            self.interface
-                .to_inet_vec()
-                .context("")?;
+        let addrs = self.interface.to_inet_vec();
         Ok(WireguardConfig {
             private_key: privkey,
             public_key: peer.public_key,
@@ -310,6 +310,7 @@ pub async fn get_jwt_token() -> io::Result<String> {
 
 mod test {
     use ipnet::Ipv4Net;
+    use iprange::IpRange;
     use serde_json::*;
 
     use crate::{CFResp, RegistrationResult};

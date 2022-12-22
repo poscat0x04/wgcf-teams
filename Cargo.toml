@@ -21,8 +21,7 @@ wireguard-keys = { version = "0.1" }
 webbrowser = { version = "0.8" }
 terminal_size = { version = "0.2" }
 iprange = { version = "0.6" }
-ipnet = { version = "2.5" }
-cidr = { version = "0.2" }
+ipnet = { version = "2.7" }
 serde = { version = "1.0", features = ["serde_derive"] }
 serde_json = { version = "1.0" }
 pretty = { version = "0.11" }
