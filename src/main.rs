@@ -262,6 +262,15 @@ impl WarpConfig {
                         .expect("Impossible, failed to serialize a WarpConfig to JSON")
                 ))?;
         let addrs = self.interface.to_inet_vec();
+
+        let mut v4range: IpRange<Ipv4Net> = IpRange::new();
+        v4range.add("0.0.0.0/0".parse().expect("Impossible, failed to parse '0.0.0.0/0'"));
+
+        let mut v6range: IpRange<Ipv6Net> = IpRange::new();
+        v6range.add("::/0".parse().expect("Impossible, failed to parse '::/0'"));
+
+        // TODO: add ip range exclusion logic
+
         Ok(WireguardConfig {
             private_key: privkey,
             public_key: peer.public_key,
@@ -269,8 +278,8 @@ impl WarpConfig {
             dns: IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)),
             mtu: 1420,
             if_address: addrs,
-            allowed_ipv4_range: todo!(),
-            allowed_ipv6_range: todo!(),
+            allowed_ipv4_range: v4range,
+            allowed_ipv6_range: v6range,
         })
     }
 }
