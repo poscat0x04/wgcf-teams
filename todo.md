@@ -2,8 +2,7 @@
 
 ## Features
 
-- [ ] Formatting of `WireguardConfig`
-- [ ] Cli parsing
+- [ ] Cache the auth token instead of registering a new device every time
 - [ ] Polish the interface
 - [ ] Configurable `AllowedIPs`
 

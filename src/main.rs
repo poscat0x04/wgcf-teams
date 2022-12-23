@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Utc};
+use clap::Parser;
 use ipnet::{IpNet, Ipv4Net, Ipv6Net};
 use iprange::IpRange;
 use reqwest::Client;
@@ -22,11 +23,22 @@ const WG_MTU: u16 = 1420;
 const V4_DNS: IpAddr = IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1));
 const V6_DNS: IpAddr = IpAddr::V6(Ipv6Addr::new(0x2606, 0x4700, 0x4700, 0x0, 0x0, 0x0, 0x0, 0x1111));
 
+#[derive(Parser)]
+#[command(author, version)]
+#[command(about = "Generate wireguard config for WARP for teams")]
+struct Arg {
+    #[arg(long, help = "the name of your zero trust organization")]
+    org: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    let arg = Arg::parse();
+
     let token =
-        get_jwt_token().await
+        get_jwt_token(&arg.org[..]).await
             .context("Failed to get jwt token")?;
+
     let client =
         build_client().await
             .context("Failed to build reqwest client")?;
@@ -38,15 +50,21 @@ async fn main() -> Result<()> {
             .header("Cf-Access-Jwt-Assertion", &token)
             .build()
             .context("Failed to build request to cloudflare API")?;
-    let resp =
+    let raw_resp =
         client
             .execute(req).await
             .context("Request to cloudflare API failed")?;
-    let a: CFResp<RegistrationResult> =
-        resp
+    let resp: CFResp<RegistrationResult> =
+        raw_resp
             .json().await
             .context("Failed to parse the result returned by cloudflare")?;
-    println!("{:?}", a);
+    let result =
+        resp
+            .get_result()
+            .context("Request failed")?;
+    let wg_config = result.config.to_wg_config(reg.key)?;
+
+    println!("{wg_config}");
     Ok(())
 }
 
@@ -80,7 +98,7 @@ struct RequestFailure {
 }
 
 impl Display for RequestFailure {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(f, "Request to Cloudflare API has failed with errors:")?;
         for err in &self.errors {
             writeln!(f, "")?;
@@ -348,11 +366,11 @@ pub async fn build_client() -> reqwest::Result<Client> {
         .build()
 }
 
-pub async fn get_jwt_token() -> io::Result<String> {
+pub async fn get_jwt_token(org: &str) -> io::Result<String> {
     println!("Please log in to warp, paste the JWT token into the stdin and press enter.");
     println!("For a detailed instruction on where to find the JWT token after login, see {}.", INSTRUCTION_URL);
     tokio::time::sleep(Duration::from_secs(5)).await;
-    webbrowser::open("https://poscat.cloudflareaccess.com/warp")?;
+    webbrowser::open(format!("https://{org}.cloudflareaccess.com/warp").as_str())?;
     let mut str = String::new();
     io::stdin().read_line(&mut str)?;
     Ok(str)
@@ -555,6 +573,7 @@ mod test {
         println!("Parse succeeded: {:?}", res.unwrap());
     }
 
+    //noinspection ALL
     #[test]
     fn test_wg_profile_conversion() {
         let res: RegistrationResult = from_str::<CFResp<_>>(TEST_FILE).unwrap().get_result().unwrap();
@@ -587,6 +606,7 @@ Endpoint = engage.cloudflareclient.com:2408
         assert_eq!(V6_DNS.to_string(), "2606:4700:4700::1111");
     }
 
+    //noinspection ALL
     #[test]
     fn test_wg_profile_generation() {
         let privkey =
