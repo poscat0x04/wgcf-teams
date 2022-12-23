@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
         client
             .post(API_ENDPOINT)
             .json(&reg)
-            .header("Cf-Access-Jwt-Assertion", &token)
+            .header("Cf-Access-Jwt-Assertion", token.trim())
             .build()
             .context("Failed to build request to cloudflare API")?;
     let raw_resp =
@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
         resp
             .get_result()
             .context("Request failed")?;
-    let wg_config = result.config.to_wg_config(reg.key)?;
+    let wg_config = result.config.to_wg_config(reg.privkey)?;
 
     println!("{wg_config}");
     Ok(())
@@ -70,7 +70,8 @@ async fn main() -> Result<()> {
 
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 struct Registration {
-    key: Privkey,
+    #[serde(rename = "key")]
+    privkey: Privkey,
     tos: DateTime<Local>,
     model: String,
     fcm_token: String,
@@ -80,7 +81,7 @@ struct Registration {
 impl Registration {
     pub fn new() -> Self {
         Registration {
-            key: Privkey::generate(),
+            privkey: Privkey::generate(),
             tos: Local::now(),
             model: String::from("iPad13,8"),
             fcm_token: String::new(),
@@ -156,7 +157,8 @@ struct RegistrationResult {
     updated: DateTime<Utc>,
     #[serde(rename = "type")]
     _type: String,
-    key: String,
+    #[serde(rename = "key")]
+    privkey: String,
     policy: WarpPolicy,
     token: String,
     locale: String,
