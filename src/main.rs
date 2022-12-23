@@ -1,17 +1,14 @@
 use std::{fmt, io};
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::Display;
+use std::fmt::{Display, Formatter};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
-use std::path::Path;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Utc};
 use ipnet::{IpNet, Ipv4Net, Ipv6Net};
 use iprange::IpRange;
-use pretty::RcDoc;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, CONNECTION, HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
@@ -250,49 +247,41 @@ struct WireguardConfig {
     endpoint: String,
 }
 
-fn kvdoc<'a, A, U>(key: &'a str, val: U) -> RcDoc<'a, A>
-    where
-        U: Into<Cow<'a, str>>
-{
-    RcDoc::text(key).append(RcDoc::text(" = ")).append(RcDoc::text(val))
-}
+impl Display for WireguardConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        macro_rules! write_kv {
+            ($k:expr, $v:expr) => {
+                writeln!(f, "{} = {}", $k, $v)
+            }
+        }
 
-fn ip_range_to_doc<T>(range: &IpRange<T>) -> RcDoc
-    where T: ToString + iprange::IpNet
-{
-    RcDoc::intersperse(range.iter().map(|x| x.to_string()), RcDoc::text(", "))
-}
+        writeln!(f, "[Interface]")?;
+        write_kv!("PrivateKey", self.private_key.to_base64())?;
 
-impl WireguardConfig {
-    pub fn to_doc(&self) -> Option<RcDoc> {
-        let lines = [
-            RcDoc::text("[Interface]"),
-            kvdoc("PrivateKey", self.private_key.to_base64()),
-            kvdoc("Address", self.if_address.first()?.to_string()),
-            //kvdoc("DNS", self.dns.to_string()),
-            kvdoc("MTU", self.mtu.to_string()),
-            RcDoc::text("[Peer]"),
-            kvdoc("PublicKey", self.public_key.to_base64()),
-            RcDoc::text("AllowedIPs = ")
-                .append(ip_range_to_doc(&self.allowed_ipv4_range))
-                .append(RcDoc::text(", "))
-                .append(ip_range_to_doc(&self.allowed_ipv6_range)),
-            kvdoc("Endpoint", self.endpoint.to_string()),
-        ];
-        Some(RcDoc::intersperse(lines, RcDoc::line()))
+        for addr in &self.if_address {
+            write_kv!("Address", addr.to_string())?;
+        }
+        for dns in &self.dns {
+            write_kv!("DNS", dns.to_string())?;
+        }
+
+        write_kv!("MTU", self.mtu.to_string())?;
+
+        writeln!(f, "")?;
+        writeln!(f, "[Peer]")?;
+        write_kv!("PublicKey", self.public_key.to_base64())?;
+
+        for cidr in self.allowed_ipv6_range.iter() {
+            write_kv!("AllowedIPs", cidr.to_string())?;
+        }
+        for cidr in self.allowed_ipv4_range.iter() {
+            write_kv!("AllowedIPs", cidr.to_string())?;
+        }
+
+        write_kv!("Endpoint", self.endpoint.to_string())?;
+
+        Ok(())
     }
-
-    pub fn fmt_config(self, width: usize) -> String {
-        let mut ret = String::new();
-        todo!()
-    }
-
-    pub fn print_config(self) {}
-
-    pub fn write_config<P>(self, path: P)
-        where
-            P: AsRef<Path> + Send + 'static
-    {}
 }
 
 impl WgIFConfig {
@@ -371,11 +360,14 @@ pub async fn get_jwt_token() -> io::Result<String> {
 
 #[cfg(test)]
 mod test {
-    use ipnet::{IpNet, Ipv4Net, Ipv6Net};
+    use std::net::{IpAddr, Ipv4Addr};
+
+    use ipnet::{IpNet, Ipv4Net};
     use iprange::IpRange;
     use serde_json::*;
+    use wireguard_keys::{Privkey, Pubkey};
 
-    use crate::{CFResp, RegistrationResult, V4_DNS, V6_DNS};
+    use crate::{CFResp, RegistrationResult, V4_DNS, V6_DNS, WG_MTU, WireguardConfig};
 
     const TEST_FILE: &str = r#"
 {
@@ -384,7 +376,7 @@ mod test {
     "version" : "6.16",
     "updated" : "2022-11-11T16:26:56.002100164Z",
     "type" : "i",
-    "key" : "/V3c9pAqcqy6SpZRq9bck69mmfFzsTi7mG8WFXW/NwU=",
+    "key" : "/V3c9pAqcqy6SpZRq9bck69mmfFzsTi7mG8TFXW/NwU=",
     "policy" : {
       "app_url" : "https://poscat.cloudflareaccess.com",
       "captive_portal" : 180,
@@ -495,7 +487,7 @@ mod test {
           "host" : "live.bilibili.com"
         }
       ],
-      "gateway_unique_id" : "07248f8927685cace2b3b4eb853a8c57",
+      "gateway_unique_id" : "07248f8927685cade2b3b4eb853a8c57",
       "allow_mode_switch" : true,
       "auto_connect" : 0,
       "disable_auto_fallback" : false,
@@ -533,12 +525,12 @@ mod test {
     "override_codes" : {
       "disable_for_time" : {
         "seconds" : 86400,
-        "secret" : "dfad7ec220d2e3187781d41229114081"
+        "secret" : "dfad7ec220d2e0187781d41229114081"
       }
     },
     "account" : {
       "managed" : "not_api_managed",
-      "id" : "07248f8927685cace2b3b4eb853a8c57",
+      "id" : "07248f8927685cace2beb4eb853a8c57",
       "organization" : "poscat",
       "account_type" : "team"
     },
@@ -564,11 +556,72 @@ mod test {
     }
 
     #[test]
+    fn test_wg_profile_conversion() {
+        let res: RegistrationResult = from_str::<CFResp<_>>(TEST_FILE).unwrap().get_result().unwrap();
+        let privkey =
+            Privkey::parse("iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=").unwrap();
+
+        let wg_profile = r#"
+[Interface]
+PrivateKey = iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=
+Address = 2606:4700:110:8d80:5ee:f514:1b65:ecfe/128
+Address = 172.16.0.2/32
+DNS = 1.1.1.1
+DNS = 2606:4700:4700::1111
+MTU = 1420
+
+[Peer]
+PublicKey = bmXOC+F1FxEMF9dyjK2H5/1SUtzH0JuVo51h2wPfgyo=
+AllowedIPs = ::/0
+AllowedIPs = 0.0.0.0/0
+Endpoint = engage.cloudflareclient.com:2408
+        "#;
+
+        let wg_cfg = res.config.to_wg_config(privkey).unwrap();
+        assert_eq!(format!("{wg_cfg}").trim(), wg_profile.trim());
+    }
+
+    #[test]
     fn test_dns_server_const() {
         assert_eq!(V4_DNS.to_string(), "1.1.1.1");
         assert_eq!(V6_DNS.to_string(), "2606:4700:4700::1111");
     }
 
     #[test]
-    fn test_wg_profile_generation() {}
+    fn test_wg_profile_generation() {
+        let privkey =
+            Privkey::parse("iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=").unwrap();
+        let pubkey =
+            Pubkey::parse("bmXOC+F1FxEMF9dyjK2H5/1SUtzH0JuVo51h2wPfgyo=").unwrap();
+
+        let profile = r#"
+[Interface]
+PrivateKey = iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=
+Address = 172.0.0.1/32
+DNS = 1.1.1.1
+MTU = 1420
+
+[Peer]
+PublicKey = bmXOC+F1FxEMF9dyjK2H5/1SUtzH0JuVo51h2wPfgyo=
+AllowedIPs = ::/0
+AllowedIPs = 0.0.0.0/0
+Endpoint = engage.cloudflareclient.com
+        "#;
+        let mut v4range = IpRange::new();
+        v4range.add("0.0.0.0/0".parse().unwrap());
+        let mut v6range = IpRange::new();
+        v6range.add("::/0".parse().unwrap());
+        let cfg = WireguardConfig {
+            private_key: privkey,
+            if_address: vec![IpNet::V4(Ipv4Net::new(Ipv4Addr::new(172, 0, 0, 1), 32).unwrap())],
+            dns: vec![IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))],
+            mtu: WG_MTU,
+            public_key: pubkey,
+            allowed_ipv4_range: v4range,
+            allowed_ipv6_range: v6range,
+            endpoint: String::from("engage.cloudflareclient.com"),
+        };
+
+        assert_eq!(profile.trim(), format!("{}", cfg).trim());
+    }
 }
