@@ -1,6 +1,8 @@
+use std::{fmt, io};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::io;
+use std::error::Error;
+use std::fmt::Display;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::path::Path;
 use std::time::Duration;
@@ -13,7 +15,7 @@ use pretty::RcDoc;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, CONNECTION, HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{to_string_pretty, Value};
 use tokio;
 use wireguard_keys::{Privkey, Pubkey};
 
@@ -72,6 +74,39 @@ impl Registration {
     }
 }
 
+// The error type representing a failed request to the cloudflare API
+// Result<T, RequestFailure> should be isomorphic to CFResp<T>
+#[derive(Eq, PartialEq, Debug)]
+struct RequestFailure {
+    errors: Vec<CFError>,
+    messages: Vec<Value>,
+}
+
+impl Display for RequestFailure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Request to Cloudflare API has failed with errors:")?;
+        for err in &self.errors {
+            writeln!(f, "")?;
+            writeln!(f, "{}",
+                     to_string_pretty(err)
+                         .expect("Impossible, failed to pretty print error")
+            )?;
+        }
+        writeln!(f, "")?;
+        writeln!(f, "And messages:")?;
+        for msg in &self.messages {
+            writeln!(f, "")?;
+            writeln!(f, "{}",
+                     to_string_pretty(msg)
+                         .expect("Impossible, failed to pretty print error")
+            )?;
+        }
+        Ok(())
+    }
+}
+
+impl Error for RequestFailure {}
+
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 struct CFError {
     code: u16,
@@ -85,6 +120,18 @@ struct CFResp<T> {
     success: bool,
     errors: Vec<CFError>,
     messages: Vec<Value>,
+}
+
+impl<T> CFResp<T> {
+    fn get_result(self) -> Result<T, RequestFailure> {
+        match self.result {
+            Some(t) => Ok(t),
+            None => Err(RequestFailure {
+                errors: self.errors,
+                messages: self.messages,
+            })
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
@@ -261,7 +308,7 @@ impl WarpConfig {
             self.peers.pop()
                 .with_context(|| format!(
                     "Warp config contains no peers: {}",
-                    serde_json::to_string_pretty(&self)
+                    to_string_pretty(&self)
                         .expect("Impossible, failed to serialize a WarpConfig to JSON")
                 ))?;
         let addrs = self.interface.to_inet_vec();
@@ -511,7 +558,7 @@ mod test {
 
     #[test]
     fn test_response_parsing() {
-        let res: serde_json::Result<CFResp<RegistrationResult>> = from_str(TEST_FILE);
+        let res: Result<CFResp<RegistrationResult>> = from_str(TEST_FILE);
         assert!(res.is_ok());
         println!("Parse succeeded: {:?}", res.unwrap());
     }
