@@ -42,7 +42,8 @@ async fn main() -> Result<()> {
     let client =
         build_client().await
             .context("Failed to build reqwest client")?;
-    let reg = Registration::new();
+    let privkey = Privkey::generate();
+    let reg = Registration::new(privkey);
     let req =
         client
             .post(API_ENDPOINT)
@@ -62,7 +63,7 @@ async fn main() -> Result<()> {
         resp
             .get_result()
             .context("Request failed")?;
-    let wg_config = result.config.to_wg_config(reg.privkey)?;
+    let wg_config = result.config.to_wg_config(privkey)?;
 
     println!("{wg_config}");
     Ok(())
@@ -71,7 +72,7 @@ async fn main() -> Result<()> {
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 struct Registration {
     #[serde(rename = "key")]
-    privkey: Privkey,
+    pubkey: Pubkey,
     tos: DateTime<Local>,
     model: String,
     fcm_token: String,
@@ -79,9 +80,9 @@ struct Registration {
 }
 
 impl Registration {
-    pub fn new() -> Self {
+    pub fn new(privkey: Privkey) -> Self {
         Registration {
-            privkey: Privkey::generate(),
+            pubkey: privkey.pubkey(),
             tos: Local::now(),
             model: String::from("iPad13,8"),
             fcm_token: String::new(),
