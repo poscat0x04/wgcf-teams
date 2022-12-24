@@ -18,7 +18,7 @@ use tokio;
 use wireguard_keys::{Privkey, Pubkey};
 
 const API_ENDPOINT: &str = "https://api.cloudflareclient.com/v0i2209280024/reg";
-const INSTRUCTION_URL: &str = "<TODO>";
+const INSTRUCTION_URL: &str = "https://github.com/poscat0x04/wgcf-teams/blob/master/guide.md";
 const WG_MTU: u16 = 1420;
 const V4_DNS: IpAddr = IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1));
 const V6_DNS: IpAddr = IpAddr::V6(Ipv6Addr::new(0x2606, 0x4700, 0x4700, 0x0, 0x0, 0x0, 0x0, 0x1111));
