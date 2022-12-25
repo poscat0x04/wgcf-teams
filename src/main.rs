@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
         resp
             .get_result()
             .context("Request failed")?;
-    let wg_config = result.config.to_wg_config(privkey)?;
+    let wg_config = result.to_wg_config(privkey)?;
 
     println!("{wg_config}");
     Ok(())
