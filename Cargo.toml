@@ -25,6 +25,7 @@ iprange = { version = "0.6" }
 ipnet = { version = "2.7" }
 serde = { version = "1.0", features = ["serde_derive"] }
 serde_json = { version = "1.0" }
+serde_with = { version = "2.2", features = ["base64"] }
 anyhow = { version = "1.0" }
 thiserror = { version = "1.0" }
 

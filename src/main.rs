@@ -14,6 +14,7 @@ use reqwest::Client;
 use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, CONNECTION, HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use serde_json::{to_string_pretty, Value};
+use serde_with::{base64::Base64, serde_as};
 use tokio;
 use wireguard_keys::{Privkey, Pubkey};
 
@@ -198,9 +199,11 @@ struct FallbackDomain {
     suffix: String,
 }
 
+#[serde_as]
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 struct WarpConfig {
-    client_id: String,
+    #[serde_as(as = "Base64")]
+    client_id: Vec<u8>,
     peers: Vec<WgPeer>,
     interface: WgIFConfig,
     metrics: Metrics,
