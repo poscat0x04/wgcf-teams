@@ -60,11 +60,11 @@ jobs:
       - name: Archive
         uses: thedoctor0/zip-release@0.7.1
         with:
-          path: output
+          directory: output
           filename: wgcf-teams-${{ needs.create-release.outputs.version }}-${{ matrix.kernel }}.zip
 
       - name: Upload Binary
         uses: shogo82148/actions-upload-release-asset@v1
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: wgcf-teams-*.zip
+          asset_path: output/wgcf-teams-*.zip
