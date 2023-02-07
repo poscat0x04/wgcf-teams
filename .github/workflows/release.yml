@@ -1,0 +1,70 @@
+name: Release
+on:
+  push:
+    tags:
+      - v*
+
+env:
+  CARGO_TERM_COLOR: always
+  __CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS: nightly
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.createRelease.outputs.upload_url }}
+      html_url: ${{ steps.createRelease.outputs.html_url }}
+      version: ${{ steps.getVersion.outputs.version }}
+    steps:
+      - name: Get version
+        id: getVersion
+        uses: olegtarasov/get-tag@v2.1.2
+        with:
+          tagRegex: "v(?<version>.*)"
+
+      - name: Create release
+        id: createRelease
+        uses: shogo82148/actions-create-release@v1
+        with:
+          release_name: ${{ steps.getVersion.outputs.version }}
+
+  build-and-upload:
+    name: Build and Upload Binary
+    needs: [ create-release ]
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        include:
+          - os: ubuntu-latest
+            kernel: linux
+          - os: windows-latest
+            kernel: windows
+          - os: macos-latest
+            kernel: darwin
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Rust Stable
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Build
+        run: cargo build  --release -Z unstable-options --out-dir output
+
+      - name: Archive
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          path: output
+          filename: wgcf-teams-${{ needs.create-release.outputs.version }}-${{ matrix.kernel }}.zip
+
+      - name: Upload Binary
+        uses: shogo82148/actions-upload-release-asset@v1
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: wgcf-teams-*.zip
