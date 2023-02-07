@@ -46,7 +46,7 @@ struct Arg {
 async fn main() -> Result<()> {
     let arg = Arg::parse();
 
-    let privkey = get_wg_privkey(arg.prompt);
+    let privkey = get_wg_privkey(arg.prompt)?;
     let token =
         get_jwt_token(&arg.org[..]).await
             .context("Failed to get jwt token")?;
