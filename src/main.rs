@@ -217,7 +217,7 @@ struct FallbackDomain {
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 struct WarpConfig {
     #[serde_as(as = "Base64")]
-    client_id: Vec<u8>,
+    client_id: [u8; 3],
     peers: Vec<WgPeer>,
     interface: WgIFConfig,
     metrics: Metrics,
@@ -283,6 +283,7 @@ struct WireguardConfig {
     allowed_ipv4_range: IpRange<Ipv4Net>,
     allowed_ipv6_range: IpRange<Ipv6Net>,
     endpoint: String,
+    routing_id: [u8; 3],
 }
 
 impl Display for WireguardConfig {
@@ -292,6 +293,11 @@ impl Display for WireguardConfig {
                 writeln!(f, "{} = {}", $k, $v)
             }
         }
+
+        write!(f, "# routing-id: 0x")?;
+        write!(f, "{:02x?}", &self.routing_id[0])?;
+        write!(f, "{:02x?}", &self.routing_id[1])?;
+        writeln!(f, "{:02x?}", &self.routing_id[2])?;
 
         writeln!(f, "[Interface]")?;
         write_kv!("PrivateKey", self.private_key.to_base64())?;
@@ -359,6 +365,7 @@ impl WarpConfig {
             if_address: addrs,
             allowed_ipv4_range: v4range,
             allowed_ipv6_range: v6range,
+            routing_id: self.client_id,
         })
     }
 }
@@ -614,6 +621,7 @@ mod test {
             Privkey::parse("iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=").unwrap();
 
         let wg_profile = r#"
+# routing-id: 0xf5a80f
 [Interface]
 PrivateKey = iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=
 Address = 2606:4700:110:8d80:5ee:f514:1b65:ecfe/128
@@ -648,6 +656,7 @@ Endpoint = engage.cloudflareclient.com:2408
             Pubkey::parse("bmXOC+F1FxEMF9dyjK2H5/1SUtzH0JuVo51h2wPfgyo=").unwrap();
 
         let profile = r#"
+# routing-id: 0x010203
 [Interface]
 PrivateKey = iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=
 Address = 172.0.0.1/32
@@ -673,6 +682,7 @@ Endpoint = engage.cloudflareclient.com
             allowed_ipv4_range: v4range,
             allowed_ipv6_range: v6range,
             endpoint: String::from("engage.cloudflareclient.com"),
+            routing_id: [1, 2, 3],
         };
 
         assert_eq!(profile.trim(), format!("{}", cfg).trim());
