@@ -1348,16 +1348,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "terminal_size"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb20089a8ba2b69debd491f8d2d023761cbf196e999218c591fa1e7e15a21907"
-dependencies = [
- "rustix",
- "windows-sys 0.42.0",
-]
-
-[[package]]
 name = "thiserror"
 version = "1.0.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1716,8 +1706,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "terminal_size",
- "thiserror",
  "tokio",
  "webbrowser",
  "wireguard-keys",
