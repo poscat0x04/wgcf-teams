@@ -28,17 +28,21 @@ const V6_DNS: IpAddr = IpAddr::V6(Ipv6Addr::new(0x2606, 0x4700, 0x4700, 0x0, 0x0
 #[command(author, version)]
 #[command(about = "Generate wireguard config for WARP for teams")]
 struct Arg {
+    // @formatter:off
     #[arg(
         long,
         help = "the name of your zero trust organization"
     )]
+    // @formatter:on
     org: String,
+    // @formatter:off
     #[arg(
         short = 'p',
         long,
         default_value_t = false,
         help = "prompt for wireguard private key instead of randomly generating one"
     )]
+    // @formatter:on
     prompt: bool,
 }
 
