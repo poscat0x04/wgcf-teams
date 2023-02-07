@@ -28,14 +28,25 @@ const V6_DNS: IpAddr = IpAddr::V6(Ipv6Addr::new(0x2606, 0x4700, 0x4700, 0x0, 0x0
 #[command(author, version)]
 #[command(about = "Generate wireguard config for WARP for teams")]
 struct Arg {
-    #[arg(long, help = "the name of your zero trust organization")]
+    #[arg(
+        long,
+        help = "the name of your zero trust organization"
+    )]
     org: String,
+    #[arg(
+        short = 'p',
+        long,
+        default_value_t = false,
+        help = "prompt for wireguard private key instead of randomly generating one"
+    )]
+    prompt: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let arg = Arg::parse();
 
+    let privkey = get_wg_privkey(arg.prompt);
     let token =
         get_jwt_token(&arg.org[..]).await
             .context("Failed to get jwt token")?;
@@ -43,7 +54,6 @@ async fn main() -> Result<()> {
     let client =
         build_client().await
             .context("Failed to build reqwest client")?;
-    let privkey = Privkey::generate();
     let reg = Registration::new(privkey);
     let req =
         client
@@ -372,9 +382,22 @@ pub async fn build_client() -> reqwest::Result<Client> {
         .build()
 }
 
+pub fn get_wg_privkey(prompt: bool) -> Result<Privkey> {
+    if prompt {
+        eprintln!("Please paste your wireguard private key to register for and press enter:");
+        let mut str = String::new();
+        io::stdin().read_line(&mut str)
+            .context("Failed to read from stdin")?;
+        Privkey::parse(str.trim_end())
+            .context("Failed to parse wireguard private key")
+    } else {
+        Ok(Privkey::generate())
+    }
+}
+
 pub async fn get_jwt_token(org: &str) -> io::Result<String> {
-    println!("Please log in to warp, paste the JWT token into the stdin and press enter.");
-    println!("For a detailed instruction on where to find the JWT token after login, see {}.", INSTRUCTION_URL);
+    eprintln!("Please log in to warp, paste the JWT token and press enter.");
+    eprintln!("For a detailed instruction on where to find the JWT token after login, see {}.", INSTRUCTION_URL);
     tokio::time::sleep(Duration::from_secs(5)).await;
     webbrowser::open(format!("https://{org}.cloudflareaccess.com/warp").as_str())?;
     let mut str = String::new();
