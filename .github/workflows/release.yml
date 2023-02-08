@@ -57,6 +57,9 @@ jobs:
       - name: Build
         run: cargo build  --release -Z unstable-options --out-dir output
 
+      - name: Copy license
+        run: cp LICENSE output/LICENSE
+
       - name: Archive
         uses: thedoctor0/zip-release@0.7.1
         with:
