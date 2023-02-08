@@ -9,7 +9,7 @@ on:
     paths:
       - 'src/**'
       - 'Cargo.toml'
-      - 'Cargo.lock''
+      - 'Cargo.lock'
 
 env:
   CARGO_TERM_COLOR: always
