@@ -1,23 +1,13 @@
-use clap::Parser;
+use argh::FromArgs;
 
-#[derive(Parser)]
-#[command(author, version)]
-#[command(about = "Generate wireguard config for WARP for teams")]
-pub struct Arg {
-    // @formatter:off
-    #[arg(
-        long,
-        help = "the name of your zero trust organization"
-    )]
-    // @formatter:on
+#[derive(FromArgs)]
+/// Generate wireguard config for WARP for teams
+pub struct Args {
+    #[argh(option)]
+    /// the name of your zero trust organization
     pub org: String,
-    // @formatter:off
-    #[arg(
-        short = 'p',
-        long,
-        default_value_t = false,
-        help = "prompt for wireguard private key instead of randomly generating one"
-    )]
-    // @formatter:on
+    #[argh(switch, short = 'p')]
+    /// whether to prompt for wireguard private key instead of
+    /// randomly generating one
     pub prompt: bool,
 }

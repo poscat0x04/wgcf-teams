@@ -2,14 +2,13 @@ use std::io;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use clap::Parser;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, ACCEPT_ENCODING, ACCEPT_LANGUAGE, CONNECTION, HeaderMap, HeaderName, HeaderValue};
 use tokio;
 use wireguard_keys::Privkey;
 
-use cli::Arg;
-use registration::{CFResp, Registration, RegistrationResult};
+use crate::cli::Args;
+use crate::registration::{CFResp, Registration, RegistrationResult};
 
 mod cli;
 mod wireguard_config;
@@ -20,7 +19,7 @@ const INSTRUCTION_URL: &str = "https://github.com/poscat0x04/wgcf-teams/blob/mas
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let arg = Arg::parse();
+    let arg: Args = argh::from_env();
 
     let privkey = get_wg_privkey(arg.prompt)?;
     let token =

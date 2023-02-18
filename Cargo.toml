@@ -20,14 +20,11 @@ iprange = "0.6"
 ipnet = "2.7"
 anyhow = "1.0"
 serde_json = "1.0"
+argh = "0.1"
 
 [dependencies.chrono]
 version = "0.4"
 features = ["serde"]
-
-[dependencies.clap]
-version = "4.0"
-features = ["derive"]
 
 [dependencies.tokio]
 version = "1.21"
