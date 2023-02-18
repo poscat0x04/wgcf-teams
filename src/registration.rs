@@ -259,15 +259,10 @@ impl RegistrationResult {
 
 #[cfg(test)]
 mod test {
-    use std::net::{IpAddr, Ipv4Addr};
-
-    use ipnet::{IpNet, Ipv4Net};
-    use iprange::IpRange;
     use serde_json::*;
-    use wireguard_keys::{Privkey, Pubkey};
+    use wireguard_keys::Privkey;
 
-    use crate::registration::{CFResp, RegistrationResult, V4_DNS, V6_DNS, WG_MTU};
-    use crate::wireguard_config::WireguardConfig;
+    use crate::registration::{CFResp, RegistrationResult, V4_DNS, V6_DNS};
 
     const TEST_FILE: &str = r#"
 {

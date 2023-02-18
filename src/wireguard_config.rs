@@ -65,7 +65,7 @@ impl Display for WireguardConfig {
 mod test {
     use std::net::{IpAddr, Ipv4Addr};
 
-    use ipnet::{IpNet, Ipv4Net, Ipv6Net};
+    use ipnet::{IpNet, Ipv4Net};
     use iprange::IpRange;
     use wireguard_keys::{Privkey, Pubkey};
 
