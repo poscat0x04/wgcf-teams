@@ -14,18 +14,36 @@ keywords = ["wireguard", "warp", "cloudflare"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
-clap = { version = "4.0", features = ["derive"] }
-tokio = { version = "1.21", features = ["rt-multi-thread", "macros", "time"] }
-reqwest = { version = "0.11", features = ["json", "gzip", "cookies"] }
-wireguard-keys = { version = "0.1" }
-webbrowser = { version = "0.8" }
-iprange = { version = "0.6" }
-ipnet = { version = "2.7" }
-serde = { version = "1.0", features = ["serde_derive"] }
-serde_json = { version = "1.0" }
-serde_with = { version = "2.2", features = ["base64"] }
-anyhow = { version = "1.0" }
+wireguard-keys = "0.1"
+webbrowser = "0.8"
+iprange = "0.6"
+ipnet = "2.7"
+anyhow = "1.0"
+serde_json = "1.0"
+
+[dependencies.chrono]
+version = "0.4"
+features = ["serde"]
+
+[dependencies.clap]
+version = "4.0"
+features = ["derive"]
+
+[dependencies.tokio]
+version = "1.21"
+features = ["rt-multi-thread", "macros", "time"]
+
+[dependencies.reqwest]
+version = "0.11"
+features = ["json", "gzip", "cookies"]
+
+[dependencies.serde]
+version = "1.0"
+features = ["serde_derive"]
+
+[dependencies.serde_with]
+version = "2.2"
+features = ["base64"]
 
 [[bin]]
 name = "wgcf-teams"
