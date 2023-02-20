@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
 
     let privkey = get_wg_privkey(arg.prompt)?;
     let token =
-        get_jwt_token(&arg.org[..]).await
+        get_jwt_token().await
             .context("Failed to get jwt token")?;
 
     let client =
@@ -74,7 +74,7 @@ pub async fn build_client() -> reqwest::Result<Client> {
 
 pub fn get_wg_privkey(prompt: bool) -> Result<Privkey> {
     if prompt {
-        eprintln!("Please paste your wireguard private key to register for and press enter:");
+        eprintln!("Please paste your wireguard private key and press enter:");
         let mut str = String::new();
         io::stdin().read_line(&mut str)
             .context("Failed to read from stdin")?;
@@ -85,11 +85,9 @@ pub fn get_wg_privkey(prompt: bool) -> Result<Privkey> {
     }
 }
 
-pub async fn get_jwt_token(org: &str) -> io::Result<String> {
-    eprintln!("Please log in to warp, paste the JWT token and press enter.");
+pub async fn get_jwt_token() -> io::Result<String> {
+    eprintln!("Please open https://<YOUR_ORGANIZATION>.cloudflareaccess.com/warp, log in to warp, paste the JWT token here and press enter.");
     eprintln!("For a detailed instruction on where to find the JWT token after login, see {}.", INSTRUCTION_URL);
-    tokio::time::sleep(Duration::from_secs(5)).await;
-    webbrowser::open(format!("https://{org}.cloudflareaccess.com/warp").as_str())?;
     let mut str = String::new();
     io::stdin().read_line(&mut str)?;
     Ok(str)

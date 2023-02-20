@@ -15,7 +15,6 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 wireguard-keys = "0.1"
-webbrowser = "0.8"
 iprange = "0.6"
 ipnet = "2.7"
 anyhow = "1.0"
