@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter};
 use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::net::IpAddr;
 
 use ipnet::{IpNet, Ipv4Net, Ipv6Net};
@@ -24,7 +24,7 @@ impl Display for WireguardConfig {
         macro_rules! write_kv {
             ($k:expr, $v:expr) => {
                 writeln!(f, "{} = {}", $k, $v)
-            }
+            };
         }
 
         write!(f, "# routing-id: 0x")?;
@@ -44,7 +44,7 @@ impl Display for WireguardConfig {
 
         write_kv!("MTU", self.mtu.to_string())?;
 
-        writeln!(f, "")?;
+        writeln!(f)?;
         writeln!(f, "[Peer]")?;
         write_kv!("PublicKey", self.public_key.to_base64())?;
 
@@ -74,10 +74,8 @@ mod test {
 
     #[test]
     fn test_wg_profile_generation() {
-        let privkey =
-            Privkey::parse("iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=").unwrap();
-        let pubkey =
-            Pubkey::parse("bmXOC+F1FxEMF9dyjK2H5/1SUtzH0JuVo51h2wPfgyo=").unwrap();
+        let privkey = Privkey::parse("iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=").unwrap();
+        let pubkey = Pubkey::parse("bmXOC+F1FxEMF9dyjK2H5/1SUtzH0JuVo51h2wPfgyo=").unwrap();
 
         let profile = r#"
 # routing-id: 0x010203
@@ -99,7 +97,9 @@ Endpoint = engage.cloudflareclient.com
         v6range.add("::/0".parse().unwrap());
         let cfg = WireguardConfig {
             private_key: privkey,
-            if_address: vec![IpNet::V4(Ipv4Net::new(Ipv4Addr::new(172, 0, 0, 1), 32).unwrap())],
+            if_address: vec![IpNet::V4(
+                Ipv4Net::new(Ipv4Addr::new(172, 0, 0, 1), 32).unwrap(),
+            )],
             dns: vec![IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))],
             mtu: WG_MTU,
             public_key: pubkey,

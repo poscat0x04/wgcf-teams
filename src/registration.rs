@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::{Display, Formatter};
 use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 
 use anyhow::Context;
@@ -18,7 +18,9 @@ use crate::wireguard_config::WireguardConfig;
 
 pub const WG_MTU: u16 = 1420;
 const V4_DNS: IpAddr = IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1));
-const V6_DNS: IpAddr = IpAddr::V6(Ipv6Addr::new(0x2606, 0x4700, 0x4700, 0x0, 0x0, 0x0, 0x0, 0x1111));
+const V6_DNS: IpAddr = IpAddr::V6(Ipv6Addr::new(
+    0x2606, 0x4700, 0x4700, 0x0, 0x0, 0x0, 0x0, 0x1111,
+));
 
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Registration {
@@ -54,19 +56,21 @@ impl Display for RequestFailure {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(f, "Request to Cloudflare API has failed with errors:")?;
         for err in &self.errors {
-            writeln!(f, "")?;
-            writeln!(f, "{}",
-                     to_string_pretty(err)
-                         .expect("Impossible, failed to pretty print error")
+            writeln!(f)?;
+            writeln!(
+                f,
+                "{}",
+                to_string_pretty(err).expect("Impossible, failed to pretty print error")
             )?;
         }
-        writeln!(f, "")?;
+        writeln!(f)?;
         writeln!(f, "And messages:")?;
         for msg in &self.messages {
-            writeln!(f, "")?;
-            writeln!(f, "{}",
-                     to_string_pretty(msg)
-                         .expect("Impossible, failed to pretty print error")
+            writeln!(f)?;
+            writeln!(
+                f,
+                "{}",
+                to_string_pretty(msg).expect("Impossible, failed to pretty print error")
             )?;
         }
         Ok(())
@@ -97,7 +101,7 @@ impl<T> CFResp<T> {
             None => Err(RequestFailure {
                 errors: self.errors,
                 messages: self.messages,
-            })
+            }),
         }
     }
 }
@@ -184,14 +188,12 @@ struct IFAddrs {
 }
 
 impl IFAddrs {
-    pub fn to_inet_vec(self) -> Vec<IpNet> {
+    pub fn to_inet_vec(&self) -> Vec<IpNet> {
         let mut v = Vec::new();
-        let v6inet =
-            Ipv6Net::new(self.v6, 128)
-                .expect("Impossible, 128 is a valid netmask length for ipv6 addresses");
-        let v4inet =
-            Ipv4Net::new(self.v4, 32)
-                .expect("Impossible, 32 is a valid netmask length for ipv4 addresses");
+        let v6inet = Ipv6Net::new(self.v6, 128)
+            .expect("Impossible, 128 is a valid netmask length for ipv6 addresses");
+        let v4inet = Ipv4Net::new(self.v4, 32)
+            .expect("Impossible, 32 is a valid netmask length for ipv4 addresses");
         v.push(IpNet::V6(v6inet));
         v.push(IpNet::V4(v4inet));
         v
@@ -210,37 +212,39 @@ struct Metrics {
 }
 
 impl WgIFConfig {
-    pub fn to_inet_vec(self) -> Vec<IpNet> {
+    pub fn to_inet_vec(&self) -> Vec<IpNet> {
         self.addresses.to_inet_vec()
     }
 }
 
 // TODO: add ip range exclusion logic
 impl WarpConfig {
-    pub fn to_wg_config(mut self, privkey: Privkey) -> anyhow::Result<WireguardConfig> {
-        let peer =
-            self.peers.pop()
-                .with_context(|| format!(
-                    "Warp config contains no peers: {}",
-                    to_string_pretty(&self)
-                        .expect("Impossible, failed to serialize a WarpConfig to JSON")
-                ))?;
+    pub fn to_wg_config(&self, privkey: Privkey) -> anyhow::Result<WireguardConfig> {
+        let peer = self.peers.first().with_context(|| {
+            format!(
+                "Warp config contains no peers: {}",
+                to_string_pretty(&self)
+                    .expect("Impossible, failed to serialize a WarpConfig to JSON")
+            )
+        })?;
         let addrs = self.interface.to_inet_vec();
 
         let mut v4range: IpRange<Ipv4Net> = IpRange::new();
-        v4range.add("0.0.0.0/0".parse().expect("Impossible, failed to parse '0.0.0.0/0'"));
+        v4range.add(
+            "0.0.0.0/0"
+                .parse()
+                .expect("Impossible, failed to parse '0.0.0.0/0'"),
+        );
 
         let mut v6range: IpRange<Ipv6Net> = IpRange::new();
         v6range.add("::/0".parse().expect("Impossible, failed to parse '::/0'"));
 
-        let mut dns = Vec::new();
-        dns.push(V4_DNS);
-        dns.push(V6_DNS);
+        let dns = vec![V4_DNS, V6_DNS];
 
         Ok(WireguardConfig {
             private_key: privkey,
             public_key: peer.public_key,
-            endpoint: peer.endpoint.host,
+            endpoint: peer.endpoint.host.clone(),
             dns,
             mtu: WG_MTU,
             if_address: addrs,
@@ -252,7 +256,7 @@ impl WarpConfig {
 }
 
 impl RegistrationResult {
-    pub fn to_wg_config(self, privkey: Privkey) -> anyhow::Result<WireguardConfig> {
+    pub fn to_wg_config(&self, privkey: Privkey) -> anyhow::Result<WireguardConfig> {
         self.config.to_wg_config(privkey)
     }
 }
@@ -453,9 +457,11 @@ mod test {
     //noinspection ALL
     #[test]
     fn test_wg_profile_conversion() {
-        let res: RegistrationResult = from_str::<CFResp<_>>(TEST_FILE).unwrap().get_result().unwrap();
-        let privkey =
-            Privkey::parse("iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=").unwrap();
+        let res: RegistrationResult = from_str::<CFResp<_>>(TEST_FILE)
+            .unwrap()
+            .get_result()
+            .unwrap();
+        let privkey = Privkey::parse("iHtAU4H3BRyVqrw3dNd9Exwh4eZvsiOgw0Gqb0oHB3U=").unwrap();
 
         let wg_profile = r#"
 # routing-id: 0xf5a80f
