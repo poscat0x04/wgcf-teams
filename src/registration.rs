@@ -140,7 +140,7 @@ struct WarpPolicy {
     allow_updates: bool,
     support_url: String,
     // TODO: Value
-    exclude: Value,
+    // exclude: Value, // Not currently required.
     gateway_unique_id: String,
     allow_mode_switch: bool,
     auto_connect: u8,
