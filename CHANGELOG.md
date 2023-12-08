@@ -10,3 +10,8 @@ Include license in release artifacts.
 
 - Optimized binary size
 - Removed browser opening behavior
+
+# 0.2.1
+
+- Updated dependencies
+- Bug fixes
