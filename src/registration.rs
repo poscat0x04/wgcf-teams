@@ -143,7 +143,7 @@ struct WarpPolicy {
     // exclude: Value, // Not currently required.
     gateway_unique_id: String,
     allow_mode_switch: bool,
-    auto_connect: u8,
+    auto_connect: u16,
     disable_auto_fallback: bool,
     organization: String,
 }
