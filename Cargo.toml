@@ -30,7 +30,7 @@ version = "1.32"
 features = ["rt-multi-thread", "macros", "time"]
 
 [dependencies.reqwest]
-version = "0.11"
+version = "0.12"
 features = ["json", "gzip", "cookies"]
 
 [dependencies.serde]
