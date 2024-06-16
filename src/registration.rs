@@ -109,17 +109,20 @@ impl<T> CFResp<T> {
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct RegistrationResult {
     id: String,
+    dex_tests: Value,
     version: String,
     updated: DateTime<Utc>,
+    key_type: String,
     #[serde(rename = "type")]
     _type: String,
     #[serde(rename = "key")]
-    privkey: String,
+    pubkey: String,
     policy: WarpPolicy,
     token: String,
     locale: String,
-    config: WarpConfig,
+    tunnel_type: String,
     created: DateTime<Utc>,
+    config: WarpConfig,
     // TODO: Value
     override_codes: Value,
     // TODO: Value

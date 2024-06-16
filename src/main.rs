@@ -15,7 +15,7 @@ mod cli;
 mod registration;
 mod wireguard_config;
 
-const API_ENDPOINT: &str = "https://api.cloudflareclient.com/v0i2209280024/reg";
+const API_ENDPOINT: &str = "https://zero-trust-client.cloudflareclient.com/v0i2308311933/reg";
 const INSTRUCTION_URL: &str = "https://github.com/poscat0x04/wgcf-teams/blob/master/guide.md";
 
 #[tokio::main]
@@ -52,7 +52,10 @@ async fn main() -> Result<()> {
 
 pub async fn build_client() -> reqwest::Result<Client> {
     let mut hdr = HeaderMap::new();
-    hdr.insert(ACCEPT_ENCODING, HeaderValue::from_str("gzip").unwrap());
+    hdr.insert(
+        ACCEPT_ENCODING,
+        HeaderValue::from_str("gzip, deflate, br").unwrap(),
+    );
     hdr.insert(
         ACCEPT_LANGUAGE,
         HeaderValue::from_str("en-US,en;q=0.9").unwrap(),
@@ -61,13 +64,15 @@ pub async fn build_client() -> reqwest::Result<Client> {
     hdr.insert(CONNECTION, HeaderValue::from_str("keep-alive").unwrap());
     hdr.insert(
         HeaderName::from_bytes(b"CF-Client-Version").unwrap(),
-        HeaderValue::from_str("i-6.16-2209280024.1").unwrap(),
+        HeaderValue::from_str("i-6.23-2308311933.1").unwrap(),
     );
     Client::builder()
-        .user_agent("1.1.1.1/2209280024.1 CFNetwork/1399 Darwin/22.1.0")
+        .user_agent("1.1.1.1/6.23")
         .default_headers(hdr)
         .cookie_store(true)
         .gzip(true)
+        .brotli(true)
+        .deflate(true)
         .timeout(Duration::from_secs(10))
         .build()
 }
